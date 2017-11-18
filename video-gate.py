@@ -1,36 +1,51 @@
+'''
+* This program demonstrates some image/video preprocessing
+  for gate detection using opencv:
+* # color filtering
+* # convert to grayscale
+* # use thresholds
+* # find contours
+* # draw boxes around objects
+
+Usage:
+  video-gate.py [<args_tbd>]
+
+  Something else would go here?
+'''
+
 import cv2
 import numpy as np
 import sys
 
-def resize(img, scale): # resize image to scale value param
-    return cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale) ))
+def resize(frame, scale): # resize image to scale value param
+    return cv2.resize(frame, (int(frame.shape[1] * scale), int(frame.shape[0] * scale) ))
 
-def scaled(img, scale): # returns new scale value
-    img_shape_x, img_shape_y, channels = img.shape
-    if(img_shape_x > scale):
-        return scale / img_shape_x
+def scaled(frame, scale): # returns new scale value
+    frame_shape_x, frame_shape_y, channels = frame.shape
+    if(frame_shape_x > scale):
+        return scale / frame_shape_x
     else:
         return 1
 
-def preprocess(image, lower_upper_list):
+def preprocess(frame, lower_upper_list):
     lower = np.array(lower_upper_list[0], dtype="uint8")
     upper = np.array(lower_upper_list[1], dtype="uint8")
 
-    mask = cv2.inRange(image, lower, upper)
-    output = cv2.bitwise_and(image, image, mask = mask)
+    mask = cv2.inRange(frame, lower, upper)
+    output = cv2.bitwise_and(frame, frame, mask = mask)
 
     return output, mask
 
-def create_all_boxes(img_contours_list):
+def create_all_boxes(frame_contours_list):
     box_list = []
-    for contour in img_contours_list:
+    for contour in frame_contours_list:
         cv2.boudingRect(contour)
         box_list.append(contour)
     return box_list
 
-def filter_boxes(img_rectangle_list, filter_size=0):
+def filter_boxes(frame_rectangle_list, filter_size=0):
     filtered_boxes = []
-    for rectangle in img_rectangle_list:
+    for rectangle in frame_rectangle_list:
         if(rectangle[2] * rectangle[3] > filter_size):
             filtered_boxes.append(rectangle)
     return filtered_boxes
@@ -52,16 +67,13 @@ if __name__ == '__main__':
     print(__doc__)
 
     try:
-        fn = sys.argv[1]
+        fn = sys.argv[1] # unused for now
     except:
         fn = 0
 
-    def nothing(*arg):
-        pass
-    
+    ## these will eventually become cmdline args
     video1_path = "img-to-video/run3.avi"
     video2_path = "img-to-video/run4.avi"
-
     video1 = cv2.VideoCapture(video2_path)
     lower_blue = np.array([55, 55, 55])
     upper_blue = np.array([150, 255, 255])
@@ -72,7 +84,6 @@ if __name__ == '__main__':
         ret, frame = video1.read()
 
         if(ret):
-            # wat
             video_frame_1, mask = preprocess(frame, [lower_blue, upper_blue]) # preprocess
             video_frame_gray = cv2.cvtColor(video_frame_1, cv2.COLOR_BGR2GRAY) # gray
             ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
