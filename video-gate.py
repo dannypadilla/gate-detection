@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
+import sys
 
 def resize(img, scale): # resize image to scale value param
     return cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale) ))
@@ -47,39 +47,50 @@ def draw_rectangles(frame, frame_rectangle_list, x_offset = 0, y_offset = 0):
 
 # **************************************************************** #
 
-video1_path = "img-to-video/run3.avi"
-video2_path = "img-to-video/run4.avi"
+if __name__ == '__main__':
 
-video1 = cv2.VideoCapture(video2_path)
+    print(__doc__)
 
-lower_blue = np.array([55, 55, 55])
-upper_blue = np.array([150, 255, 255])
-threshold_color = [0, 255, 0] # green
-box_filter_size = 400
+    try:
+        fn = sys.argv[1]
+    except:
+        fn = 0
 
-while(video1.isOpened() ):
+    def nothing(*arg):
+        pass
     
-    ret, frame = video1.read()
-    
-    if(ret):
-        # wat
-        video_frame_1, mask = preprocess(frame, [lower_blue, upper_blue]) # preprocess
-        video_frame_gray = cv2.cvtColor(video_frame_1, cv2.COLOR_BGR2GRAY) # gray
-        ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
-        frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    video1_path = "img-to-video/run3.avi"
+    video2_path = "img-to-video/run4.avi"
 
-        #frame_copy = frame.copy()
-        #cv2.drawContours(frame_copy, frame_contours, -1, threshold_color, 3)
+    video1 = cv2.VideoCapture(video2_path)
+    lower_blue = np.array([55, 55, 55])
+    upper_blue = np.array([150, 255, 255])
+    threshold_color = [0, 255, 0] # green
+    box_filter_size = 400
 
-        frame_all_boxes = [cv2.boundingRect(c) for c in frame_contours]
-        frame_filtered_boxes = filter_boxes(frame_all_boxes, box_filter_size)
-        draw_rectangles(frame, frame_filtered_boxes, 5, 5) # last 2 params are offset
-        
-        cv2.imshow("Run 3", frame)
-        if(cv2.waitKey(1) & 0xFF == ord("q") ):
+    while(video1.isOpened() ):
+        ret, frame = video1.read()
+
+        if(ret):
+            # wat
+            video_frame_1, mask = preprocess(frame, [lower_blue, upper_blue]) # preprocess
+            video_frame_gray = cv2.cvtColor(video_frame_1, cv2.COLOR_BGR2GRAY) # gray
+            ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
+            frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+            #frame_copy = frame.copy()
+            #cv2.drawContours(frame_copy, frame_contours, -1, threshold_color, 3)
+
+            frame_all_boxes = [cv2.boundingRect(c) for c in frame_contours]
+            frame_filtered_boxes = filter_boxes(frame_all_boxes, box_filter_size)
+            draw_rectangles(frame, frame_filtered_boxes, 5, 5) # last 2 params are offset
+
+            cv2.imshow("Run 3", frame)
+
+            if(cv2.waitKey(1) & 0xFF == ord("q") ):
+                break
+        else:
             break
-    else:
-        break
 
-video1.release()
-cv2.destroyAllWindows()
+    video1.release()
+    cv2.destroyAllWindows()
