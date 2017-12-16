@@ -9,6 +9,9 @@
 # Linux
 # MacOS
 
+# Folder/project specific
+./created_files/*
+
 # CMAKE
 CMakeCache.txt
 CMakeFiles
