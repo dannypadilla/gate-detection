@@ -1,16 +1,17 @@
 '''
-* This program demonstrates some image/video preprocessing
+1. This program demonstrates some image/video preprocessing
   for gate detection using opencv:
 * # color filtering
 * # convert to grayscale
 * # use thresholds
 * # find contours
 * # draw boxes around objects
+2. Outputs to a video file too
 
 Usage:
   video-gate.py [<args_tbd>]
 
-  Something else would go here?
+  Output is created in current directory
 '''
 
 import cv2
@@ -80,6 +81,13 @@ if __name__ == '__main__':
     threshold_color = [0, 255, 0] # green
     box_filter_size = 400
 
+    ## for outputting video
+    fps = 3.0
+    file_name = "./run3_.avi"
+    # create write object
+    fourcc  = cv2.VideoWriter_fourcc(*"M", "J", "P", "G") # for mac
+    out = cv2.VideoWriter(file_name, fourcc, fps, (744, 480) ) # has to be frame size of img
+
     while(video1.isOpened() ):
         ret, frame = video1.read()
 
@@ -96,6 +104,9 @@ if __name__ == '__main__':
             frame_filtered_boxes = filter_boxes(frame_all_boxes, box_filter_size)
             draw_rectangles(frame, frame_filtered_boxes, 5, 5) # last 2 params are offset
 
+            # write to file
+            out.write(frame)
+
             cv2.imshow("Run 3", frame)
 
             if(cv2.waitKey(1) & 0xFF == ord("q") ):
@@ -103,5 +114,6 @@ if __name__ == '__main__':
         else:
             break
 
+    out.release()
     video1.release()
     cv2.destroyAllWindows()
