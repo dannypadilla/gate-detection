@@ -10,7 +10,7 @@
 # MacOS
 
 # Folder/project specific
-./created_files/*
+created_files/*
 
 # CMAKE
 CMakeCache.txt
