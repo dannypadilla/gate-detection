@@ -7,8 +7,8 @@ import os
 ## on each frame add frame #, detection, telemetry?, etc.... 
 ## clean up plz
 
-imgs_path = "./fourth_run"
-file_name = "./run4_3fps.avi"
+imgs_path = "./tmp_files/fourth_run"
+file_name = "./created_files/run4_3fps.avi"
 fps = 2.0 # has to be >= 1.0
 
 front = "/" # for appending front_slash..... meh
