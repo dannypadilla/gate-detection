@@ -34,7 +34,8 @@ class ColorFilter(Preprocess.Preprocess):
     def get_mask(self):
         return self.mask
 
+    # finish
     def __str__(self):
         return str(
-            ""
+            "\n\tBoundary Values:"
         )

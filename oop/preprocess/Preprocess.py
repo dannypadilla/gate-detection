@@ -23,6 +23,6 @@ class Preprocess():
         return self.output
 
     def __str__(self):
-        return str("Image Path: " + str(self.image_path) +
-                   "\nBinary Image: " + str(self.grayscale_image != None)
+        return str("\n\tImage Path: " + str(self.image_path) +
+                   "\n\tBinary Image: " + str(self.grayscale_image != None)
         )
