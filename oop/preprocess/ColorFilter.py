@@ -36,6 +36,7 @@ class ColorFilter(Preprocess.Preprocess):
 
     # finish
     def __str__(self):
-        return str(
-            "\n\tBoundary Values:"
+        return str(" * Color Filter:" +
+                   "\n\tUpper Boundary - " + str(self.lower_bound) +
+                   "\n\tLower Boundary - " + str(self.upper_bound)
         )

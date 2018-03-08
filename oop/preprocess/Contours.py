@@ -5,15 +5,15 @@ from preprocess import Preprocess
 class Contours(Preprocess.Preprocess):
 
     retrieval_mode_list = {
-        1: cv2.RETR_EXTERNAL, # gets only extreme outer contours
-        2: cv2.RETR_LIST, # gets all contours with no hierarchy
-        3: cv2.RETR_CCOMP,
-        4: cv2.RETR_TREE, # gets all contours and reconstructs full hierarchy <-- using this one for now
-        5: cv2.RETR_FLOODFILL # ? don't use
+        1: "cv2.RETR_EXTERNAL", # gets only extreme outer contours
+        2: "cv2.RETR_LIST", # gets all contours with no hierarchy
+        3: "cv2.RETR_CCOMP",
+        4: "cv2.RETR_TREE", # gets all contours and reconstructs full hierarchy <-- using this one for now
+        5: "cv2.RETR_FLOODFILL" # ? don't use
     }
     approx_method_list = {
-        1: cv2.CHAIN_APPROX_NONE, # stores all the contour points
-        2: cv2.CHAIN_APPROX_SIMPLE # compresses contours <-- using this one for now
+        1: "cv2.CHAIN_APPROX_NONE", # stores all the contour points
+        2: "cv2.CHAIN_APPROX_SIMPLE" # compresses contours <-- using this one for now
     }
 
     def __init__(self, image_path, retrieval_mode, approx_method):
@@ -50,8 +50,18 @@ class Contours(Preprocess.Preprocess):
     # returns a new list of contours filtered by boundary values (exclusive)
     def filter_contours(lower_boundary, upper_boundary):
         # need to error check if contours hasn't been calculated yet
-        self.filtered_contours = [] # empty existing list
-        for cont in self.contours:
-            if len(cont) > lower_boundary and len(cont) < upper_boundary:
-                self.filtered_contours.append(cont)
+        if (self.contours != None):
+            self.filtered_contours = [] # empty existing list
+            for cont in self.contours:
+                if len(cont) > lower_boundary and len(cont) < upper_boundary:
+                    self.filtered_contours.append(cont)
         return self.filtered_contours
+
+    # finish
+    def __str__(self): # not pointing to right ret-mode and approx-method
+        return str(" * Contours:" +
+                   "\n\tRetrieval Mode - " + str(self.retrieval_mode_list[self.retrieval_mode] ) +
+                   "\n\tApproximation Method - " + str(self.approx_method_list[self.approx_method] ) +
+                   "\n\tNumber of Contours - " + str((self.contours != None) ) +
+                   "\n\tFiltered Contours - " + str((self.filtered_contours != None) )
+        )
