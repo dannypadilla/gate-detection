@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import sys
 import glob
-from sklearn.svm import SVC, SVR
+from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.externals import joblib
 
@@ -126,32 +126,39 @@ if __name__ == '__main__':
     # ****************************** /IMAGES SETUP/ ************************ #
 
     video_dict = {
-        1: "gate_jon_1.avi",
-        2: "gate_jon_2.avi",
-        3: "gate_jon_3.avi",
-        4: "no_gate_@5fps.avi",
-        5: "old_run4_@3fps.avi"
+        1: "gate_jon_1.avi", # 0:10
+        2: "gate_jon_2.avi", # 0:08
+        3: "gate_jon_3.avi", # 1:31
+        4: "no_gate_@5fps.avi", # 0:19
+        5: "old_run4_@3fps.avi" # 0:56
     }
 
     pos_img_dict = {
         1: "images/whole_gate/*.jpg",
         2: "images/bars/*.jpg",
         3: "images/whole_gate_and_bars/*.jpg",
-        4: "jupyter/positive/*.jpg"
+        4: "images/gray_whole_gate/*.jpg",
+        5: "images/gray_bars/*.jpg",
+        6: "images/gray_whole_gate_and_bars/*.jpg",
+        7: "jupyter/positive/*.jpg", # no jons pool data
+        7: "jupyter/positive_old/*.jpg" # before resize to 80x80
     }
 
+    # no jupyter negative since same as larg_negatives
     neg_img_dict = {
         1: "images/negatives/*.jpg",
-        2: "jupyter/negative/*.jpg"
+        2: "images/large_negatives/*.jpg",
+        3: "images/gray_negatives/*.jpg"
     }
     
-    vid = 5
-    pos = 1
+    vid = 3
+    pos = 3
     neg = 1
     video_path = "videos/" + video_dict[vid]
     positive_images_path = pos_img_dict[pos]
     negative_images_path = neg_img_dict[neg]
 
+    min_prob = .98
     svm_choices = str(pos) + str(neg) # numbers correspond to dict values used
     choices = str(vid) + str(pos) + str(neg) # numbers correspond to dict values used
     model_name = "svm_" + svm_choices
@@ -188,7 +195,6 @@ if __name__ == '__main__':
     except:
         print("\nTraining model...")
         svm = SVC(C=1.0, kernel="linear", probability=True, random_state=2)
-        #svm = SVR(C=1.0, kernel="linear")
         train_svm(svm, hog, positive_images_path, negative_images_path)
         joblib.dump(svm, path) # store model object to disk
         print("\nStoring model to location: " + "\"" + path + "\"\n")
@@ -201,7 +207,7 @@ if __name__ == '__main__':
 
     # since the videos res and orientation are different
     camera_is_upside_down = False
-    if(vid <= 3):
+    if(vid < 4):
         out = cv2.VideoWriter(file_name, fourcc, fps, (640, 480) ) # has to be frame size of img
         camera_is_upside_down = True
     else:
@@ -232,6 +238,7 @@ if __name__ == '__main__':
             frame_g_gray = cv2.cvtColor(frame_g, cv2.COLOR_BGR2GRAY)
             frame_r_gray = cv2.cvtColor(frame_r, cv2.COLOR_BGR2GRAY)
 
+            ## NOTES (IGNORE PLZ)
             ## @all0 -   r-b=X, b-r=~~X, r-g=X,  g-r=X,   b-g=test, g-b=~X     --> THRESH
             ## @all0 -   r-b=X, b-r=X,   r-g=~X, g-r=X,   b-g=X,    g-b=test   --> THRESH_INV
             ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~ok, b-g=~ok,  g-b=better --> THRESH
@@ -255,8 +262,8 @@ if __name__ == '__main__':
                     new_cont_list.append(cont)
             filtered_contours = np.array(new_cont_list)
 
-            #frame_copy = frame.copy()
-            #cv2.drawContours(frame_copy, new_cont_list, -1, threshold_color, 3)
+            frame_copy = frame.copy()
+            cv2.drawContours(frame_copy, new_cont_list, -1, threshold_color, 3)
 
             #frame_all_boxes = [cv2.boundingRect(c) for c in frame_contours]
             frame_all_boxes = [cv2.boundingRect(c) for c in filtered_contours]
@@ -273,7 +280,7 @@ if __name__ == '__main__':
                 proba = svm.predict_proba(feat_reshape)[0] # [0] since returns a 2d array.. [[x]]
                 prediction = svm.predict(feat_reshape) # 0 or 1
                 gate_class = proba[1] # corresponds to class 1 (positive gate)
-                if prediction > 0 and gate_class >= .9:
+                if prediction > 0 and gate_class >= min_prob:
                     positive_roi = [(x, y, w, h)]
                     #positive_roi.append( (x, y, w, h) )
                     print("\nprediction %", gate_class, "\n")
@@ -289,13 +296,13 @@ if __name__ == '__main__':
             cv2.moveWindow("gate", 0, 0)
             
             cv2.imshow("thresholding", frame_thresh) # threshold frame
-            cv2.moveWindow("thresholding", 0, 500)
+            cv2.moveWindow("thresholding", 620, 0)
 
             cv2.imshow("grayscale", video_frame_gray) # grayscale
-            cv2.moveWindow("grayscale", 500, 0)
+            cv2.moveWindow("grayscale", 0, 500)
 
-            #cv2.imshow("contours", frame_copy) # contours
-            #cv2.moveWindow("contours", 500, 500)
+            cv2.imshow("contours", frame_copy) # contours
+            cv2.moveWindow("contours", 620, 500)
 
             if(cv2.waitKey(1) & 0xFF == ord("q") ):
                 break
@@ -306,3 +313,4 @@ if __name__ == '__main__':
     out.release()
     video.release()
     cv2.destroyAllWindows()
+ 

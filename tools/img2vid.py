@@ -7,11 +7,9 @@ import os
 ## on each frame add frame #, detection, telemetry?, etc.... 
 ## clean up plz
 
-imgs_path = "./tmp_files/fourth_run"
-file_name = "./created_files/run4_3fps.avi"
-fps = 2.0 # has to be >= 1.0
-
-front = "/" # for appending front_slash..... meh
+imgs_path = "../no_gate/"
+fps = 5.0 # has to be >= 1.0
+file_name = "../created_files/no_gate_@" + str(fps) + "fps.avi"
 
 #it = os.scandir(imgs_path)
 
@@ -24,13 +22,14 @@ with os.scandir(imgs_path) as it: # from python3 docs
 ls_sorted = sorted(ls) # good enough for now
 
 fourcc  = cv2.VideoWriter_fourcc(*"M", "J", "P", "G") # for mac
-out = cv2.VideoWriter(file_name, fourcc, fps, (744, 480) ) # has to be frame size of img
+img_res = (744, 480)
+out = cv2.VideoWriter(file_name, fourcc, fps, img_res) # has to be frame size of img
 
 for i in ls_sorted:
-    new_path = imgs_path + front + i
-    print("Wrote", new_path) # cmd line visuals
+    new_path = imgs_path + i
     img = cv2.imread(new_path)
     out.write(img)
+    print("Wrote", new_path) # cmd line visuals
 
 it.close()
 out.release()

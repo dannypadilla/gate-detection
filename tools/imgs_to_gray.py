@@ -44,13 +44,13 @@ def import_images(path, img_names):
         img_list.append(cv2.imread(path + img) )
     return img_list
 
-
-## -- END file utils -- ##
+## -- main -- ##
 
 if __name__ == '__main__':
 
     print(__doc__)
 
+    # too much error check?
     try:
         imgs_path = sys.argv[1]
         store_imgs_to = sys.argv[2]
@@ -68,17 +68,17 @@ if __name__ == '__main__':
 
     number_of_images = 0
     
-    if(len(imgs_file_names) != len(imgs_list) ):
+    if(len(imgs_file_names) != len(imgs_list) ): # probably don't need..
         print("\nNumber of files in directory doesn't match number of images imported...")
         print("\nRIP\n")
         exit(0)
     else:
         number_of_images = len(imgs_list)
-    
+
     for img in range(number_of_images):
         gray = to_grayscale(imgs_list[img] ) # convert to gray
-        new_file_name = "gray_" + imgs_file_names[img]
-        cv2.imwrite(store_imgs_to + new_file_name, gray)
-        print("Wrote: " + new_file_name + " to " +  store_imgs_to)
+        new_file_name = "gray_" + imgs_file_names[img] # create new file name
+        cv2.imwrite(store_imgs_to + new_file_name, gray) # write img to dir
+        print("Wrote: " + new_file_name + " to " +  store_imgs_to) # just cli visual
 
     print("\nDONE!\n")
