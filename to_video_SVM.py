@@ -130,7 +130,11 @@ if __name__ == '__main__':
         2: "gate_jon_2.avi", # 0:08
         3: "gate_jon_3.avi", # 1:31
         4: "no_gate_@5fps.avi", # 0:19
-        5: "old_run4_@3fps.avi" # 0:56
+        5: "old_run4_@3fps.avi", # 0:56
+        6: "gate-6.7.1_output.avi", # 6/7 test run
+        7: "jon_gate_run_6.8_3.avi",
+        8: "jon_gate_run_6.8_4.avi",
+        9: "jon_gate_run_6.8_5.avi"
     }
 
     pos_img_dict = {
@@ -141,7 +145,7 @@ if __name__ == '__main__':
         5: "images/gray_bars/*.jpg",
         6: "images/gray_whole_gate_and_bars/*.jpg",
         7: "jupyter/positive/*.jpg", # no jons pool data
-        7: "jupyter/positive_old/*.jpg" # before resize to 80x80
+        8: "jupyter/positive_old/*.jpg" # before resize to 80x80
     }
 
     # no jupyter negative since same as larg_negatives
@@ -151,7 +155,7 @@ if __name__ == '__main__':
         3: "images/gray_negatives/*.jpg"
     }
     
-    vid = 3
+    vid = 7 # 7, 8, 9 for now
     pos = 3
     neg = 1
     video_path = "videos/" + video_dict[vid]
@@ -207,9 +211,10 @@ if __name__ == '__main__':
 
     # since the videos res and orientation are different
     camera_is_upside_down = False
-    if(vid < 4):
+    if(vid < 4 or vid > 5):
         out = cv2.VideoWriter(file_name, fourcc, fps, (640, 480) ) # has to be frame size of img
-        camera_is_upside_down = True
+        if(vid < 4):
+            camera_is_upside_down = True
     else:
         out = cv2.VideoWriter(file_name, fourcc, fps, (744, 480) ) # has to be frame size of img
 
@@ -223,9 +228,16 @@ if __name__ == '__main__':
                 rows, cols, ch = frame.shape
                 rot_trans = cv2.getRotationMatrix2D( (cols/2, rows/2), 180, 1) # rotate image 180
                 frame = cv2.warpAffine(frame, rot_trans, (cols, rows) ) # since camera is upside down..
+
+            ''' BLUR - FILTERING '''
             
+            frame_blur = cv2.bilateralFilter(frame, 9, 100, 100)
+
+            ''' END BLUR - FILTERING END'''
+                
             #video_frame, mask = preprocess(frame, [lower_blue, upper_blue]) # preprocess
-            #video_frame_gray = cv2.cvtColor(video_frame, cv2.COLOR_BGR2GRAY) # gray
+            video_frame, mask = preprocess(frame_blur, [lower_blue, upper_blue]) # blur
+            video_frame_gray = cv2.cvtColor(video_frame, cv2.COLOR_BGR2GRAY) # gray
 
             ''' TESTING ''' 
             frame_b = frame.copy()
@@ -244,9 +256,10 @@ if __name__ == '__main__':
             ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~ok, b-g=~ok,  g-b=better --> THRESH
             ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~X,  b-g=~ok,  g-b=~ok    --> THRESH_INV
 
-            video_frame_gray = frame_g_gray - frame_b_gray # works - @all255
+            #video_frame_gray = frame_g_gray - frame_b_gray # works - @all255
             #video_frame_gray = frame_r_gray - frame_b_gray # testing
             ''' END TESTING '''
+
             
             ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
             #ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO_INV)
