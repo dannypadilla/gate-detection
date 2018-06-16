@@ -4,8 +4,8 @@ import os
 import time
 
 #imgs_path = "./no_gate/"
-imgs_path = "/Users/dannypadilla/Desktop/images/"
-file_name = "/Users/dannypadilla/Desktop/images/resized/"
+imgs_path = "/Users/dannypadilla/Desktop/images/" # where original imgs are
+file_name = "/Users/dannypadilla/Desktop/images/resized/" # resized images will be saved here
 scale = (240, 180) # original (744, 480)
 
 ls = [] # list of files in directory
