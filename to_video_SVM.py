@@ -47,6 +47,41 @@ def preprocess(frame, lower_upper_list):
     return output, mask
 
 
+def filter_contours(frame_countours, min_cont_size=100, max_cont_size=5000):
+    new_cont_list = []
+    for cont in frame_contours:
+        cont_len = len(cont)
+        if ( (cont_len > min_cont_size) and (cont_len < max_cont_size) ):
+            new_cont_list.append(cont)
+    filtered_contours = np.array(new_cont_list)
+    return filtered_contours
+
+
+## made to declutter main()
+def color_subtract_test():
+    ''' TESTING - COLOR SUBTRACTION '''
+    frame_b = frame.copy()
+    frame_g = frame.copy()
+    frame_r = frame.copy()
+    frame_b[:,:,0] = 255
+    frame_g[:,:,1] = 255
+    frame_r[:,:,2] = 255
+    frame_b_gray = cv2.cvtColor(frame_b, cv2.COLOR_BGR2GRAY)
+    frame_g_gray = cv2.cvtColor(frame_g, cv2.COLOR_BGR2GRAY)
+    frame_r_gray = cv2.cvtColor(frame_r, cv2.COLOR_BGR2GRAY)
+
+            ## NOTES (IGNORE PLZ)
+            ## @all0 -   r-b=X, b-r=~~X, r-g=X,  g-r=X,   b-g=test, g-b=~X     --> THRESH
+            ## @all0 -   r-b=X, b-r=X,   r-g=~X, g-r=X,   b-g=X,    g-b=test   --> THRESH_INV
+            ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~ok, b-g=~ok,  g-b=better --> THRESH
+            ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~X,  b-g=~ok,  g-b=~ok    --> THRESH_INV
+
+            #video_frame_gray = frame_g_gray - frame_b_gray # works - @all255
+            #video_frame_gray = frame_r_gray - frame_b_gray # testing
+    ''' END TESTING '''
+    print("END OF COLOR_SUBTRACT_TEST")
+
+
 def get_features_with_label(img_data, hog, label):
     dims = (80, 80)
     data = []
@@ -134,7 +169,14 @@ if __name__ == '__main__':
         6: "gate-6.7.1_output.avi", # 6/7 test run
         7: "jon_gate_run_6.8_3.avi",
         8: "jon_gate_run_6.8_4.avi",
-        9: "jon_gate_run_6.8_5.avi"
+        9: "jon_gate_run_6.8_5.avi",
+        10: "auv_video/rawgate-01_output.avi", # new lens 10 - 16
+        11: "auv_video/rawgate-02_output.avi",
+        12: "auv_video/rawgate-03_output.avi",
+        13: "auv_video/rawgate-04_output.avi", # has gate
+        14: "auv_video/rawgate-05_output.avi", # has gate
+        15: "auv_video/rawgate-06_output.avi", # ripple test
+        16: "auv_video/rawgate-07_output.avi" # has gate
     }
 
     pos_img_dict = {
@@ -145,24 +187,27 @@ if __name__ == '__main__':
         5: "images/gray_bars/*.jpg",
         6: "images/gray_whole_gate_and_bars/*.jpg",
         7: "jupyter/positive/*.jpg", # no jons pool data
-        8: "jupyter/positive_old/*.jpg" # before resize to 80x80
+        8: "jupyter/positive_old/*.jpg", # before resize to 80x80
+        9: "images/stairs_pos/*.jpg" # new lens
     }
 
     # no jupyter negative since same as larg_negatives
     neg_img_dict = {
         1: "images/negatives/*.jpg",
         2: "images/large_negatives/*.jpg",
-        3: "images/gray_negatives/*.jpg"
+        3: "images/gray_negatives/*.jpg",
+        4: "images/stairs_neg/*.jpg" # new lens
     }
     
-    vid = 7 # 7, 8, 9 for now
+    vid = 13
     pos = 3
     neg = 1
     video_path = "videos/" + video_dict[vid]
     positive_images_path = pos_img_dict[pos]
     negative_images_path = neg_img_dict[neg]
 
-    min_prob = .98
+    # model setup
+    min_prob = .99
     svm_choices = str(pos) + str(neg) # numbers correspond to dict values used
     choices = str(vid) + str(pos) + str(neg) # numbers correspond to dict values used
     model_name = "svm_" + svm_choices
@@ -172,8 +217,12 @@ if __name__ == '__main__':
     ## these will eventually become cmdline args
     #video_path = "videos/gate_new.avi"
     video = cv2.VideoCapture(video_path)
-    lower_blue = np.array([0, 50, 50])
-    upper_blue = np.array([130, 250, 255])
+    
+    #lower_blue = np.array([0, 50, 50])
+    #upper_blue = np.array([130, 250, 255])
+    lower_blue = np.array([0, 0, 0])    
+    upper_blue = np.array([100, 255, 255]) # new lens values
+    
     threshold_color = [0, 255, 0] # green
     box_filter_size = 400
 
@@ -204,20 +253,25 @@ if __name__ == '__main__':
         print("\nStoring model to location: " + "\"" + path + "\"\n")
         
     ## for outputting video
-    fps = 8.0
+    fps = 30.0 # 8.0 orig
     #file_name = "./run_jons_.avi"
     file_name = "./gate_" + choices + ".avi"
     fourcc  = cv2.VideoWriter_fourcc(*"M", "J", "P", "G") # create write object for mac
 
     # since the videos res and orientation are different
     camera_is_upside_down = False
-    if(vid < 4 or vid > 5):
+    if(vid < 4 or vid > 5 or vid < 10):
         out = cv2.VideoWriter(file_name, fourcc, fps, (640, 480) ) # has to be frame size of img
         if(vid < 4):
             camera_is_upside_down = True
     else:
         out = cv2.VideoWriter(file_name, fourcc, fps, (744, 480) ) # has to be frame size of img
+    
 
+    ####### REMOVE!!! KLAJLKJDKFJKSLDF 
+    out = cv2.VideoWriter(file_name, fourcc, fps, (744, 480) ) # has to be frame size of img
+    #/#########
+    predicted_counter = 0
     # start video processing
     while(video.isOpened() ):
         ret, frame = video.read()
@@ -228,58 +282,37 @@ if __name__ == '__main__':
                 rows, cols, ch = frame.shape
                 rot_trans = cv2.getRotationMatrix2D( (cols/2, rows/2), 180, 1) # rotate image 180
                 frame = cv2.warpAffine(frame, rot_trans, (cols, rows) ) # since camera is upside down..
-
-            ''' BLUR - FILTERING '''
             
+            ''' BLUR - FILTERING '''
+            # OPTIONAL
             frame_blur = cv2.bilateralFilter(frame, 9, 100, 100)
-
             ''' END BLUR - FILTERING END'''
-                
+
+            # choose between blur or non blur - OPTIONAL
             #video_frame, mask = preprocess(frame, [lower_blue, upper_blue]) # preprocess
             video_frame, mask = preprocess(frame_blur, [lower_blue, upper_blue]) # blur
+
+            # to grayscale
             video_frame_gray = cv2.cvtColor(video_frame, cv2.COLOR_BGR2GRAY) # gray
 
-            ''' TESTING ''' 
-            frame_b = frame.copy()
-            frame_g = frame.copy()
-            frame_r = frame.copy()
-            frame_b[:,:,0] = 255
-            frame_g[:,:,1] = 255
-            frame_r[:,:,2] = 255
-            frame_b_gray = cv2.cvtColor(frame_b, cv2.COLOR_BGR2GRAY)
-            frame_g_gray = cv2.cvtColor(frame_g, cv2.COLOR_BGR2GRAY)
-            frame_r_gray = cv2.cvtColor(frame_r, cv2.COLOR_BGR2GRAY)
-
-            ## NOTES (IGNORE PLZ)
-            ## @all0 -   r-b=X, b-r=~~X, r-g=X,  g-r=X,   b-g=test, g-b=~X     --> THRESH
-            ## @all0 -   r-b=X, b-r=X,   r-g=~X, g-r=X,   b-g=X,    g-b=test   --> THRESH_INV
-            ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~ok, b-g=~ok,  g-b=better --> THRESH
-            ## @all255 - r-b=X, b-r=X,   r-g=~X, g-r=~X,  b-g=~ok,  g-b=~ok    --> THRESH_INV
-
-            #video_frame_gray = frame_g_gray - frame_b_gray # works - @all255
-            #video_frame_gray = frame_r_gray - frame_b_gray # testing
-            ''' END TESTING '''
-
-            
-            ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
+            # thresholding - OPTIONAL
+            #ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
+            ret, frame_thresh = cv2.threshold(video_frame_gray, 100, 255, cv2.THRESH_TOZERO) # allow more
             #ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO_INV)
+
+            # find contours
             frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            
-            # contours length filter was here -- RIP
-            min_cont_size = 100
-            max_cont_size = 5000
-            new_cont_list = []
-            for cont in frame_contours:
-                cont_len = len(cont)
-                if ( (cont_len > min_cont_size) and (cont_len < max_cont_size) ):
-                    new_cont_list.append(cont)
-            filtered_contours = np.array(new_cont_list)
+            # filter contours based on length - defaule min = 100, max = 5000
+            filtered_contours = filter_contours(frame_contours)
 
+            # draw contours for visual
             frame_copy = frame.copy()
-            cv2.drawContours(frame_copy, new_cont_list, -1, threshold_color, 3)
+            cv2.drawContours(frame_copy, filtered_contours, -1, threshold_color, 3)
 
+            # select between all contours and filtered
             #frame_all_boxes = [cv2.boundingRect(c) for c in frame_contours]
             frame_all_boxes = [cv2.boundingRect(c) for c in filtered_contours]
+            
             frame_filtered_boxes = filter_boxes(frame_all_boxes, box_filter_size)
 
             all_cont_color = [0, 0, 255] # red
@@ -296,14 +329,18 @@ if __name__ == '__main__':
                 if prediction > 0 and gate_class >= min_prob:
                     positive_roi = [(x, y, w, h)]
                     #positive_roi.append( (x, y, w, h) )
-                    print("\nprediction %", gate_class, "\n")
+                    predicted_counter += 1
+                    print("\n#", predicted_counter, "Prediction %", gate_class, "\n")
+                    
+
+            # OPTIONAL
             draw_rectangles(frame, positive_roi, threshold_color, 5, 5) # last 2 params are offset
             #draw_rectangles(frame, frame_filtered_boxes, all_cont_color, 5, 5) # last 2 params are offset
 
             # write to file
             out.write(frame)
-
-            ''' VIEW MULTIPLE TEST SCREENS '''
+            
+            ''' ------ VIEW MULTIPLE TEST SCREENS ------ '''
             cv2.imshow("gate", frame) # actual frame
             #cv2.resizeWindow("Gate", 100, 100)
             cv2.moveWindow("gate", 0, 0)
@@ -316,6 +353,7 @@ if __name__ == '__main__':
 
             cv2.imshow("contours", frame_copy) # contours
             cv2.moveWindow("contours", 620, 500)
+            ''' ------ /END VIEW MULTIPLE TEST SCREENS ------ '''
 
             if(cv2.waitKey(1) & 0xFF == ord("q") ):
                 break
@@ -323,6 +361,7 @@ if __name__ == '__main__':
             break
 
     #print(svm.classes_)
+    print("\nNumber of positive predictions:", predicted_counter, "\n")
     out.release()
     video.release()
     cv2.destroyAllWindows()
