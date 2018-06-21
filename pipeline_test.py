@@ -177,19 +177,19 @@ if __name__ == '__main__':
         14: "auv_video/rawgate-05_output.avi", # has gate
         15: "auv_video/rawgate-06_output.avi", # ripple test
         16: "auv_video/rawgate-07_output.avi", # has gate
-        17: "auv_video/rawgate-08_output.avi", # school pool
-        18: "auv_video/rawgate-09_output.avi", # school pool
-        19: "auv_video/rawgate-10_output.avi", # school pool
-        20: "auv_video/rawgate-11_output.avi", # has gate
-        21: "auv_video/rawgate-12_output.avi", # has gate
-        22: "auv_video/rawgate-13_output.avi", # has gate
-        23: "auv_video/rawgate-14_output.avi", # has gate
-        24: "auv_video/rawgate-15_output.avi", # has gate
-        25: "auv_video/rawgate-16_output.avi", # has gate
-        26: "auv_video/rawgate-17_output.avi", # has gate
-        27: "auv_video/rawgate-18_output.avi", # has gate
-        28: "auv_video/rawgate-19_output.avi", # has gate
-        29: "auv_video/rawgate-20_output.avi", # has gate
+        17: "auv_video/rawgate-08_output.avi", # school pool 6.18.18
+        18: "auv_video/rawgate-09_output.avi",
+        19: "auv_video/rawgate-10_output.avi",
+        20: "auv_video/rawgate-11_output.avi",
+        21: "auv_video/rawgate-12_output.avi",
+        22: "auv_video/rawgate-13_output.avi",
+        23: "auv_video/rawgate-14_output.avi",
+        24: "auv_video/rawgate-15_output.avi",
+        25: "auv_video/rawgate-16_output.avi",
+        26: "auv_video/rawgate-17_output.avi",
+        27: "auv_video/rawgate-18_output.avi",
+        28: "auv_video/rawgate-19_output.avi",
+        29: "auv_video/rawgate-20_output.avi" # school pool 6.18.18
     }
 
     pos_img_dict = {
@@ -219,8 +219,8 @@ if __name__ == '__main__':
         7: "images/all_negative/*.jpg", # all color images combined
         8: "images/gray_all_negative/*.jpg", # all gray images combined
     }
-    
-    vid = 17
+    # 19 - vert bar ignored
+    vid = 17 # 19, 20 - need work
     pos = 12 # 3
     neg = 7 # 1
     video_path = "videos/" + video_dict[vid]
@@ -228,7 +228,7 @@ if __name__ == '__main__':
     negative_images_path = neg_img_dict[neg]
 
     # model setup
-    min_prob = .90
+    min_prob = .3
     svm_choices = str(pos) + str(neg) # numbers correspond to dict values used
     choices = str(vid) + str(pos) + str(neg) # numbers correspond to dict values used
     model_name = "svm_" + svm_choices
@@ -244,7 +244,10 @@ if __name__ == '__main__':
     #upper_blue = np.array([60, 255, 255])
 
     # new vals - slightly better, allows a little more 'black', testing is ok
-    lower_blue = np.array([0, 100, 50])
+    #lower_blue = np.array([0, 100, 50])
+    #upper_blue = np.array([10, 255, 255])
+
+    lower_blue = np.array([0, 150, 0])
     upper_blue = np.array([10, 255, 255])
     
     threshold_color = [0, 255, 0] # green
@@ -309,40 +312,50 @@ if __name__ == '__main__':
                 rot_trans = cv2.getRotationMatrix2D( (cols/2, rows/2), 180, 1) # rotate image 180
                 frame = cv2.warpAffine(frame, rot_trans, (cols, rows) ) # since camera is upside down..
 
-            
+            # blur before
             frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             
             ''' BLUR - FILTERING '''
             # OPTIONAL
             #frame_blur = cv2.bilateralFilter(frame_hsv, 9, 100, 100)
-            frame_blur = cv2.GaussianBlur(frame_hsv, (5, 5), 0)
+            #frame_blur = cv2.GaussianBlur(frame_hsv, (5, 5), 0)
             ''' END BLUR - FILTERING END'''
 
+            # blur after
             #frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
             # choose between blur or non blur - OPTIONAL
-            #video_frame, mask = preprocess(frame_hsv, [lower_blue, upper_blue]) # preprocess
-            video_frame, mask = preprocess(frame_blur, [lower_blue, upper_blue]) # blur
+            video_frame, mask = preprocess(frame_hsv, [lower_blue, upper_blue]) # preprocess
+            #video_frame, mask = preprocess(frame_blur, [lower_blue, upper_blue]) # blur
+
+            kernel = np.ones( (5, 5), np.uint8)
+            close_frame = cv2.morphologyEx(video_frame, cv2.MORPH_CLOSE, kernel) # fill in
+            #open_frame = cv2.morphologyEx(close_frame, cv2.MORPH_OPEN, kernel) # remove specs
+            dilate_frame = cv2.dilate(close_frame, kernel, iterations=3) # make chubby
 
             # to grayscale
-            vid_hsv2bgr = cv2.cvtColor(video_frame, cv2.COLOR_HSV2BGR)
-            video_frame_gray = cv2.cvtColor(vid_hsv2bgr, cv2.COLOR_BGR2GRAY) # gray
+            #vid_hsv2bgr = cv2.cvtColor(video_frame, cv2.COLOR_HSV2BGR)
             #video_frame_gray = cv2.cvtColor(video_frame, cv2.COLOR_BGR2GRAY) # gray
+            
+            vid_hsv2bgr = cv2.cvtColor(dilate_frame, cv2.COLOR_HSV2BGR)
+            video_frame_gray = cv2.cvtColor(vid_hsv2bgr, cv2.COLOR_BGR2GRAY) # gray
 
             # thresholding - OPTIONAL
             #ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
             ret, frame_thresh = cv2.threshold(video_frame_gray, 100, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU) # allow more
 
-            ''' MORPH OPS'''
+            ''' MORPH OPS
             kernel = np.ones( (5, 5), np.uint8) # tmp for now
-            erode_frame = cv2.erode(frame_thresh, kernel, iterations=1) # fade/trim
-            open_frame = cv2.morphologyEx(erode_frame, cv2.MORPH_OPEN, kernel) # remove specs
+            #erode_frame = cv2.erode(frame_thresh, kernel, iterations=1) # fade/trim
+            #open_frame = cv2.morphologyEx(erode_frame, cv2.MORPH_OPEN, kernel) # remove specs
+            open_frame = cv2.morphologyEx(frame_thresh, cv2.MORPH_OPEN, kernel) # remove specs
             close_frame = cv2.morphologyEx(open_frame, cv2.MORPH_CLOSE, kernel) # fill in
             dilate_frame = cv2.dilate(close_frame, kernel, iterations=1) # make chubby
-
+            '''
+            
             # find contours
-            #frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            frame_c, frame_contours, frame_heirarchy = cv2.findContours(dilate_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            #frame_c, frame_contours, frame_heirarchy = cv2.findContours(dilate_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             
             # filter contours based on length - defaule min = 100, max = 5000
             filtered_contours = filter_contours(frame_contours, min_cont_size=100, max_cont_size=1000)
@@ -360,26 +373,44 @@ if __name__ == '__main__':
             all_cont_color = [0, 0, 255] # red
             positive_roi = []
             dimensions = (80, 80)
+            max_val = 0
             for x, y, w, h in frame_filtered_boxes:
                 roi = frame[y:y + h, x:x + w, :]
-                cv2.imwrite("images/roi/img_roi" + str(roi_counter) + ".jpg", roi) # save roi to disk
+                #cv2.imwrite("images/roi/img_roi" + str(roi_counter) + ".jpg", roi) # save roi to disk
                 roi_resized = cv2.resize(roi, dimensions) # dimensions defined as (80, 80) above
                 features = hog.compute(roi_resized)
                 feat_reshape = features.reshape(1, -1)
                 proba = svm.predict_proba(feat_reshape)[0] # [0] since returns a 2d array.. [[x]]
                 prediction = svm.predict(feat_reshape) # 0 or 1
                 gate_class = proba[1] # corresponds to class 1 (positive gate)
-                if prediction > 0 and gate_class >= .9:
+                if prediction > 0 and gate_class >= min_prob and gate_class > max_val:
+                    max_val = gate_class
                     positive_roi = [(x, y, w, h)]
                     #positive_roi.append( (x, y, w, h) )
                     predicted_counter += 1
                     print("\n#", predicted_counter, "Prediction %", gate_class, "\n")
                 roi_counter += 1
-                    
 
             # OPTIONAL
             draw_rectangles(frame, positive_roi, threshold_color, 5, 5) # last 2 params are offset
             #draw_rectangles(frame, frame_filtered_boxes, all_cont_color, 5, 5) # last 2 params are offset
+
+            ''' CENTER CIRCLE '''
+            # draw circle in center of camera frame
+            frame_row, frame_col, frame_ch = frame.shape
+            cv2.circle(frame, (frame_col//2, frame_row//2), 50, (0, 0, 255), 2)
+            circle_rad = 50
+            area = np.pi * circle_rad
+            # draw a circle in the center of the detected roi
+            if (positive_roi != []):
+                roi_x, roi_y, roi_w, roi_h = positive_roi[0] # coordinates of roi
+                roi_row = (roi_x + (roi_x + roi_w) )//2 # center of x
+                roi_col = (roi_y + (roi_y + roi_h) )//2 # center of y
+                if (roi_row < 2):
+                    asdf = 1
+                else:
+                    cv2.circle(frame, (roi_row, roi_col), 10, (255, 0, 0), -1)
+            ''' END CIRCLE '''
 
             # write to file
             out.write(frame)
