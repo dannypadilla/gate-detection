@@ -23,6 +23,9 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.externals import joblib
 
+from lists.video_list import video_dict
+from lists.training_data_list import pos_img_dict, neg_img_dict
+
 # **************************** USEFUL METHODS ********************* #
 
 def resize(frame, scale): # resize image to scale value param
@@ -127,7 +130,7 @@ def create_all_boxes(frame_contours_list):
     return box_list
 
 
-def filter_boxes(frame_rectangle_list, filter_size=0):
+def filter_boxes(frame_rectangle_list, filter_size=4000):
     filtered_boxes = []
     for rectangle in frame_rectangle_list:
         if(rectangle[2] * rectangle[3] > filter_size):
@@ -145,6 +148,33 @@ def draw_rectangles(frame, frame_rectangle_list, color, x_offset=0, y_offset=0):
             2
         )
 
+# reshape an ROI to a square image
+# tuple in, tuple out
+def roi_to_square(img, x, y, w, h):
+    frame_y, frame_x, ch = img.shape
+    x_shape = w # size of x ROI
+    y_shape = h # size of y ROI
+    
+    if(x_shape > y_shape):
+        y_diff = (x_shape - y_shape) // 2
+        if( (y - y_diff) < 0):
+            return (x, y, w, h + (y_diff * 2) ) # add only to bottom
+        elif( (h + y_diff) > frame_y):
+            return (x, y - (y_diff * 2), w, h) # add only to top
+        else:
+            return (x, y - y_diff, w, h + y_diff) # add to both top and bottom
+    elif(y_shape > x_shape):
+        x_diff = (y_shape - x_shape) // 2
+        if( (x - x_diff) < 0):
+            return (x, y, w + (x_diff * 2), h) # add only to right side
+        elif( (w + x_diff) > frame_x):
+            return (x - (x_diff * 2), y, w, h) # add only to left side
+        else:
+            return (x - x_diff, y, w + x_diff, h) # add to left and right side
+    else:
+        return (x, y, w, h) # already square
+
+
 # ****************************** /END METHODS/ ******************** #
 
 # ***************************************************************** #
@@ -160,83 +190,22 @@ if __name__ == '__main__':
 
     # ****************************** /IMAGES SETUP/ ************************ #
 
-    video_dict = {
-        1: "gate_jon_1.avi", # 0:10
-        2: "gate_jon_2.avi", # 0:08
-        3: "gate_jon_3.avi", # 1:31
-        4: "no_gate_@5fps.avi", # 0:19
-        5: "old_run4_@3fps.avi", # 0:56
-        6: "gate-6.7.1_output.avi", # 6/7 test run
-        7: "jon_gate_run_6.8_3.avi",
-        8: "jon_gate_run_6.8_4.avi",
-        9: "jon_gate_run_6.8_5.avi",
-        10: "auv_video/rawgate-01_output.avi", # new lens 10 - 16
-        11: "auv_video/rawgate-02_output.avi",
-        12: "auv_video/rawgate-03_output.avi",
-        13: "auv_video/rawgate-04_output.avi", # has gate
-        14: "auv_video/rawgate-05_output.avi", # has gate
-        15: "auv_video/rawgate-06_output.avi", # ripple test
-        16: "auv_video/rawgate-07_output.avi", # has gate
-        17: "auv_video/rawgate-08_output.avi", # school pool 6.18.18
-        18: "auv_video/rawgate-09_output.avi",
-        19: "auv_video/rawgate-10_output.avi",
-        20: "auv_video/rawgate-11_output.avi",
-        21: "auv_video/rawgate-12_output.avi",
-        22: "auv_video/rawgate-13_output.avi",
-        23: "auv_video/rawgate-14_output.avi",
-        24: "auv_video/rawgate-15_output.avi",
-        25: "auv_video/rawgate-16_output.avi",
-        26: "auv_video/rawgate-17_output.avi",
-        27: "auv_video/rawgate-18_output.avi",
-        28: "auv_video/rawgate-19_output.avi",
-        29: "auv_video/rawgate-20_output.avi" # school pool 6.18.18
-    }
-
-    pos_img_dict = {
-        1: "images/whole_gate/*.jpg",
-        2: "images/bars/*.jpg",
-        3: "images/whole_gate_and_bars/*.jpg",
-        4: "images/gray_whole_gate/*.jpg",
-        5: "images/gray_bars/*.jpg",
-        6: "images/gray_whole_gate_and_bars/*.jpg",
-        7: "jupyter/positive/*.jpg", # no jons pool data
-        8: "jupyter/positive_old/*.jpg", # before resize to 80x80
-        9: "images/stairs_pos_orig/*.jpg", # new lens - not resized
-        10: "images/stairs_pos/*.jpg", # resized to 80x80
-        11: "images/gray_stairs_pos/*.jpg",
-        12: "images/all_positive/*.jpg", # all color images combined
-        13: "images/gray_all_positive/*.jpg" # all gray images combined
-    }
-
-    # no jupyter negative since same as larg_negatives
-    neg_img_dict = {
-        1: "images/negatives/*.jpg",
-        2: "images/large_negatives/*.jpg",
-        3: "images/gray_negatives/*.jpg",
-        4: "images/stairs_neg_orig/*.jpg", # new lens - not resized
-        5: "images/stairs_neg/*.jpg", # resized to 80x80
-        6: "images/gray_stairs_neg/*.jpg",
-        7: "images/all_negative/*.jpg", # all color images combined
-        8: "images/gray_all_negative/*.jpg", # all gray images combined
-    }
-    # 19 - vert bar ignored
-    vid = 17 # 19, 20 - need work
-    pos = 12 # 3
-    neg = 7 # 1
+    vid = 90 # 30 - 56: 7/5/16 video sets *** 57 - 73 7/16/18
+    pos = 16 # 3
+    neg = 10 # 1
     video_path = "videos/" + video_dict[vid]
     positive_images_path = pos_img_dict[pos]
     negative_images_path = neg_img_dict[neg]
+    choices = str(vid) + "-" + str(pos) + "-" + str(neg) # numbers correspond to dict values used - for naming
 
     # model setup
-    min_prob = .3
-    svm_choices = str(pos) + str(neg) # numbers correspond to dict values used
-    choices = str(vid) + str(pos) + str(neg) # numbers correspond to dict values used
+    min_prob = .1
+    svm_choices = str(pos) + "-"  + str(neg) # numbers correspond to dict values used - for naming
     model_name = "svm_" + svm_choices
 
     # ****************************** /END IMAGES SETUP/ ******************** #
 
     ## these will eventually become cmdline args
-    #video_path = "videos/gate_new.avi"
     video = cv2.VideoCapture(video_path)
 
     # orig - good
@@ -247,8 +216,11 @@ if __name__ == '__main__':
     #lower_blue = np.array([0, 100, 50])
     #upper_blue = np.array([10, 255, 255])
 
-    lower_blue = np.array([0, 150, 0])
-    upper_blue = np.array([10, 255, 255])
+    #lower_blue = np.array([0, 150, 0])
+    #upper_blue = np.array([10, 255, 255])
+
+    lower_blue = np.array([0, 100, 0])
+    upper_blue = np.array([180, 200, 150])
     
     threshold_color = [0, 255, 0] # green
     box_filter_size = 400
@@ -264,7 +236,6 @@ if __name__ == '__main__':
     
     svm = None # SVM
     model_path = "models/gate/"
-    #model_name = "orig_svm" # so I can append to video file name too..
     model_file_name = model_name + ".pkl" # whole file name
     vers_label = "py3"
     path = model_path + vers_label + "_" + model_file_name
@@ -281,7 +252,6 @@ if __name__ == '__main__':
         
     ## for outputting video
     fps = 30.0 # 8.0 orig
-    #file_name = "./run_jons_.avi"
     file_name = "./gate_" + choices + ".avi"
     fourcc  = cv2.VideoWriter_fourcc(*"M", "J", "P", "G") # create write object for mac
 
@@ -301,12 +271,15 @@ if __name__ == '__main__':
     
     predicted_counter = 0
     roi_counter = 1
+    store_roi_to = "images/_rois/img_roi_ " + choices + "_" + str(min_prob) + "_" # for storing found ROI's to disk
+
+    kernel = np.ones( (5, 5), np.uint8)
+    
     # start video processing
     while(video.isOpened() ):
         ret, frame = video.read()
 
         if(ret):
-            
             if(camera_is_upside_down): # whether camera should be rotated 180 deg
                 rows, cols, ch = frame.shape
                 rot_trans = cv2.getRotationMatrix2D( (cols/2, rows/2), 180, 1) # rotate image 180
@@ -328,8 +301,12 @@ if __name__ == '__main__':
             video_frame, mask = preprocess(frame_hsv, [lower_blue, upper_blue]) # preprocess
             #video_frame, mask = preprocess(frame_blur, [lower_blue, upper_blue]) # blur
 
-            kernel = np.ones( (5, 5), np.uint8)
+            #video_frame_gray = cv2.cvtColor(video_frame, cv2.COLOR_BGR2GRAY) # gray
+
+            #ret, frame_thresh = cv2.threshold(video_frame_gray, 100, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU) # allow more
+
             close_frame = cv2.morphologyEx(video_frame, cv2.MORPH_CLOSE, kernel) # fill in
+            #close_frame = cv2.morphologyEx(frame_thresh, cv2.MORPH_CLOSE, kernel) # fill in
             #open_frame = cv2.morphologyEx(close_frame, cv2.MORPH_OPEN, kernel) # remove specs
             dilate_frame = cv2.dilate(close_frame, kernel, iterations=3) # make chubby
 
@@ -344,6 +321,32 @@ if __name__ == '__main__':
             #ret, frame_thresh = cv2.threshold(video_frame_gray, 127, 255, cv2.THRESH_TOZERO)
             ret, frame_thresh = cv2.threshold(video_frame_gray, 100, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU) # allow more
 
+            '''
+            # noise removal
+            kernel = np.ones((3,3),np.uint8)
+            opening = cv2.morphologyEx(frame_thresh, cv2.MORPH_OPEN,kernel, iterations = 2)
+            # sure background area
+            sure_bg = cv2.dilate(opening,kernel,iterations=3)
+            # Finding sure foreground area
+            dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,5)
+            ret, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0)
+            # Finding unknown region
+            sure_fg = np.uint8(sure_fg)
+            unknown = cv2.subtract(sure_bg, sure_fg)
+            # Marker labelling
+            ret, markers = cv2.connectedComponents(sure_fg)
+            # Add one to all labels so that sure background is not 0, but 1
+            markers = markers + 1
+            # Now, mark the region of unknown with zero
+            markers[unknown==255] = 0
+
+            img_copy = frame.copy()
+            markers = cv2.watershed(img_copy, markers)
+            img_copy[markers == -1] = [255, 0, 0]
+
+            ret, frame_thresh_wat = cv2.threshold(video_frame_gray, 100, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU) # allow more
+            '''
+
             ''' MORPH OPS
             kernel = np.ones( (5, 5), np.uint8) # tmp for now
             #erode_frame = cv2.erode(frame_thresh, kernel, iterations=1) # fade/trim
@@ -356,6 +359,7 @@ if __name__ == '__main__':
             # find contours
             frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             #frame_c, frame_contours, frame_heirarchy = cv2.findContours(dilate_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            #frame_c, frame_contours, frame_heirarchy = cv2.findContours(frame_thresh_wat, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             
             # filter contours based on length - defaule min = 100, max = 5000
             filtered_contours = filter_contours(frame_contours, min_cont_size=100, max_cont_size=1000)
@@ -374,18 +378,31 @@ if __name__ == '__main__':
             positive_roi = []
             dimensions = (80, 80)
             max_val = 0
+            
             for x, y, w, h in frame_filtered_boxes:
+                #x_sq, y_sq, w_sq, h_sq = roi_to_square(frame, x, y, w, h)
+                
                 roi = frame[y:y + h, x:x + w, :]
-                #cv2.imwrite("images/roi/img_roi" + str(roi_counter) + ".jpg", roi) # save roi to disk
+                #roi = frame[y_sq:y_sq + h_sq, x_sq:x_sq + w_sq, :]
+                
                 roi_resized = cv2.resize(roi, dimensions) # dimensions defined as (80, 80) above
+                #cv2.imwrite(store_roi_to + str(roi_counter) + "_resized_" + ".jpg", roi_resized) # save roi to disk
                 features = hog.compute(roi_resized)
                 feat_reshape = features.reshape(1, -1)
                 proba = svm.predict_proba(feat_reshape)[0] # [0] since returns a 2d array.. [[x]]
                 prediction = svm.predict(feat_reshape) # 0 or 1
                 gate_class = proba[1] # corresponds to class 1 (positive gate)
+                #cv2.imwrite(store_roi_to + str(roi_counter) + "_resized_" + str(prediction) + "_" + str(gate_class)  + ".jpg", roi_resized) # save roi to disk
                 if prediction > 0 and gate_class >= min_prob and gate_class > max_val:
                     max_val = gate_class
+                    
                     positive_roi = [(x, y, w, h)]
+                    positive_image_roi = frame[y:y + h, x:x + w, :]
+
+                    #positive_roi = [(x_sq, y_sq, w_sq, h_sq)]
+                    #positive_image_roi = frame[y_sq:y_sq + h_sq, x_sq:x_sq + w_sq, :]
+                    
+                    cv2.imwrite(store_roi_to + str(roi_counter) + "_resized"  + ".jpg", roi_resized) # save roi to disk
                     #positive_roi.append( (x, y, w, h) )
                     predicted_counter += 1
                     print("\n#", predicted_counter, "Prediction %", gate_class, "\n")
@@ -393,14 +410,17 @@ if __name__ == '__main__':
 
             # OPTIONAL
             draw_rectangles(frame, positive_roi, threshold_color, 5, 5) # last 2 params are offset
+            #draw_rectangles(frame, roi, threshold_color, 5, 5) # last 2 params are offset
             #draw_rectangles(frame, frame_filtered_boxes, all_cont_color, 5, 5) # last 2 params are offset
 
-            ''' CENTER CIRCLE '''
+            '''
+            # CENTER CIRCLE
             # draw circle in center of camera frame
             frame_row, frame_col, frame_ch = frame.shape
             cv2.circle(frame, (frame_col//2, frame_row//2), 50, (0, 0, 255), 2)
             circle_rad = 50
             area = np.pi * circle_rad
+            
             # draw a circle in the center of the detected roi
             if (positive_roi != []):
                 roi_x, roi_y, roi_w, roi_h = positive_roi[0] # coordinates of roi
@@ -409,8 +429,10 @@ if __name__ == '__main__':
                 if (roi_row < 2):
                     asdf = 1
                 else:
-                    cv2.circle(frame, (roi_row, roi_col), 10, (255, 0, 0), -1)
-            ''' END CIRCLE '''
+                    print()
+                    cv2.circle(frame, (roi_row, roi_col), 5, (255, 0, 0), -1)
+            # END CIRCLE
+'''
 
             # write to file
             out.write(frame)
@@ -421,6 +443,7 @@ if __name__ == '__main__':
             cv2.moveWindow("gate", 0, 0)
             
             cv2.imshow("thresholding", frame_thresh) # threshold frame
+            #cv2.imshow("thresholding", frame_thresh_wat) # threshold frame
             cv2.moveWindow("thresholding", 700, 0)
 
             cv2.imshow("grayscale", video_frame_gray) # grayscale
